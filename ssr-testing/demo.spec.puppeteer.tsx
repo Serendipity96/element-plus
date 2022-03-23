@@ -4,13 +4,13 @@ import { renderToString } from '@vue/server-renderer'
 import { beforeAll, describe, expect, it } from 'vitest'
 import puppeteer from 'puppeteer'
 import glob from 'fast-glob'
-import ElementPlus from '../dist/element-plus'
+import ElementPlus, { ID_INJECTION_KEY } from '../dist/element-plus'
 
 import type { Browser } from 'puppeteer'
 
 const projectRoot = process.cwd()
-const testRoot = `${projectRoot}/ssr-testing`
-const exampleRoot = path.resolve(projectRoot, 'docs/examples')
+const testRoot = path.resolve(projectRoot, 'ssr-testing')
+const demoRoot = path.resolve(testRoot, 'cases')
 describe('Cypress Button', () => {
   let browser: Browser
   beforeAll(async () => {
@@ -18,10 +18,11 @@ describe('Cypress Button', () => {
   })
 
   describe('when initialized', () => {
-    const demos = glob
-      .sync(`${projectRoot}/docs/examples/**/*.vue`)
-      .map((demo) => demo.slice(exampleRoot.length + 1))
-    it.each(demos)(`render %s correctly`, async (demoPath) => {
+    const demoPaths = glob
+      .sync(`${demoRoot}/*.vue`)
+      .map((demo) => demo.slice(demoRoot.length + 1))
+
+    it.each(demoPaths)(`render %s correctly`, async (demoPath) => {
       const page = await browser.newPage()
       await page.goto(`file://${projectRoot}/ssr-testing/index.html`)
       await page.addStyleTag({
@@ -33,22 +34,30 @@ describe('Cypress Button', () => {
           'index.css'
         ),
       })
-      const { default: Demo } = await import(path.join(exampleRoot, demoPath))
-      const app = createApp(<Demo />).use(ElementPlus)
+
+      const { default: Demo } = await import(path.join(demoRoot, demoPath))
+      const app = createApp(<Demo />)
+        .use(ElementPlus)
+        .provide(ID_INJECTION_KEY, {
+          prefix: 100,
+          current: 0,
+        })
+
       const html = await renderToString(app)
 
       await page.evaluate((innerHTML) => {
         document.querySelector('#root')!.innerHTML = innerHTML
       }, html)
 
-      const screenshotPath = demoPath
-        .split('/')
-        .join('-')
-        .replace(/\.vue$/, '.png')
-      await page.screenshot({
-        path: path.join(testRoot, 'screenshots', screenshotPath),
-        fullPage: true,
-      })
+      // SSR testing don't need screenshots.
+      // const screenshotPath = demoPath
+      //   .split('/')
+      //   .join('-')
+      //   .replace(/\.vue$/, '.png')
+      // await page.screenshot({
+      //   path: path.join(testRoot, 'screenshots', screenshotPath),
+      //   fullPage: true,
+      // })
       await page.close()
       expect(true).toBe(true)
     })

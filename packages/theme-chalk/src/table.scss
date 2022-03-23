@@ -42,6 +42,8 @@
 
   // when data is empty
   @include e(empty-block) {
+    position: sticky;
+    left: 0;
     min-height: 60px;
     text-align: center;
     width: 100%;
@@ -515,7 +517,7 @@
     & .#{$namespace}-table__body {
       & tr.#{$namespace}-table__row--striped {
         td.#{$namespace}-table__cell {
-          background: #fafafa;
+          background: getCssVar('fill-color', 'lighter');
         }
 
         &.current-row td.#{$namespace}-table__cell {
